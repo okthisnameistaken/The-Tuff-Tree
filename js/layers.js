@@ -14,7 +14,7 @@ addLayer("r", {
     type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 0.5, // Prestige currency exponent
     gainMult() { // Calculate the multiplier for main currency from bonuses
-        mult = new Decimal(1)
+        let mult = new Decimal(1)
         return mult
     },
     gainExp() { // Calculate the exponent on main currency from bonuses
@@ -31,6 +31,14 @@ addLayer("r", {
             cost: new Decimal(1),
             },
             12: { title: "The unfirst upgrade",
+            description: "Boost ticks by tokens (very creative i know).",
+            cost: new Decimal(2),
+            effect() {
+                return player[this.layer].points.add(1).pow(0.5)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" }, // Add formatting to the effect also hi
+            },
+            13: { title: "The unfirst upgrade",
             description: "Boost ticks by tokens (very creative i know).",
             cost: new Decimal(2),
             effect() {
