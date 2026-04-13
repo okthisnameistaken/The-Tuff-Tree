@@ -27,9 +27,16 @@ addLayer("r", {
     layerShown(){return true},
 
         upgrades: { 11: { title: "The first upgrade",
-            description: "Boost ticks by 2x.",
-        cost: new Decimal(1),
-    },
-
+             description: "Boost ticks by 2x.",
+            cost: new Decimal(1),
+            },
+            12: { title: "The unfirst upgrade",
+            description: "Boost ticks by tokens (very creative i know).",
+            cost: new Decimal(2),
+            effect() {
+                return player[this.layer].points.add(1).pow(0.5)
+            },
+            effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" }, // Add formatting to the effect also hi
+            },
     },
 })
