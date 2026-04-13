@@ -47,5 +47,9 @@ addLayer("r", {
             },
             effectDisplay() { return format(upgradeEffect(this.layer, this.id))+"x" }, // Add formatting to the effect also hi
             },
+            14: { title: "The big time",
+            description: "Boost ticks by 3x.",
+            cost: new Decimal(10),
+            },
     },
 })
