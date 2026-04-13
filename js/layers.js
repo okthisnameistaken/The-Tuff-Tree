@@ -24,5 +24,12 @@ addLayer("r", {
     hotkeys: [
         {key: "r", description: "Rebirths: You can rebirth for tokens!", onPress(){if (canReset(this.layer)) doReset(this.layer)}},
     ],
-    layerShown(){return true}
+    layerShown(){return true},
+
+        upgrades: { 11: { title: "The first upgrade",
+            description: "Boost ticks by 2x.",
+        cost: new Decimal(1),
+    },
+
+    },
 })
