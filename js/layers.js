@@ -166,4 +166,23 @@ addLayer("b", {
             },
         },
     },
+    upgrades: {
+        11: {
+            title: "Token Generator",
+            description: "Gain 0.1% of tokens per second.",
+            cost: new Decimal(1e10),
+            effect() {
+                return getPointGen().times(0.001)
+            },
+            effectDisplay() {
+                return format(this.effect()) + " tokens/sec"
+            },
+        },
+    },
+    update() {
+        if (hasUpgrade('b', 11)) {
+            let tokenGain = getResetGain('r').div(1000)
+            player['r'].points = player['r'].points.add(tokenGain)
+        }
+    },
 })
