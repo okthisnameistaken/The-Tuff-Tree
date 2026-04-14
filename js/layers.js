@@ -15,11 +15,16 @@ addLayer("r", {
     baseAmount() {return player.points}, // Get the current amount of baseResource
     type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
     exponent: 0.5, // Prestige currency exponent
-    gainMult() { // Calculate the multiplier for main currency from bonuses
+    gainMult() {
         let mult = new Decimal(1)
-        if (hasUpgrade('r', 13)) mult = mult.times(upgradeEffect('r', 13))
-        if (player['b'] && player['b'].points) {
-            mult = mult.times(buyableEffect('b', 11))
+        // Token Doubler effect with Dark Dimensions boost
+        let tokendoublerAmount = getBuyableAmount('b', 11)
+        if (tokendoublerAmount.gt(0)) {
+            let boost = new Decimal(1)
+            if (hasUpgrade('b', 16)) {
+                boost = new Decimal(1).add(player['b'].darkDimensions)
+            }
+            mult = mult.times(new Decimal(2).pow(tokendoublerAmount.times(boost)))
         }
         return mult
     },
@@ -101,6 +106,16 @@ addLayer("r", {
             setBuyableAmount(this.layer, this.id, owned.add(1))
         },
     },
+    doReset(resettingLayer) {
+        if (resettingLayer == "b" && hasUpgrade('b', 12)) {
+            // Keep upgrades when resetting to reboot
+            let keptUpgrades = []
+            for (let upgrade in player['r'].upgrades) {
+                keptUpgrades.push(upgrade)
+            }
+            player['r'].upgrades = keptUpgrades
+        }
+    },
 }
 })
 
@@ -112,6 +127,7 @@ addLayer("b", {
         unlocked: false,
         points: new Decimal(0),
         rebootUnlocked: false,
+        darkDimensions: new Decimal(0),
     }},
     color: "#4169e1",
     requires: new Decimal(100000000), // 100 million
@@ -129,6 +145,13 @@ addLayer("b", {
     row: 1,
     update() {
         if (player.points.gte(100000000)) player['b'].rebootUnlocked = true
+        if (hasUpgrade('b', 16)) {
+            let pointsLog = player.points.log10()
+            let gain = pointsLog.sub(729).div(100)
+            if (gain.gt(0)) {
+                player['b'].darkDimensions = player['b'].darkDimensions.add(gain)
+            }
+        }
     },
     layerShown() { return player['b'].rebootUnlocked },
     getResetGain() {
@@ -141,7 +164,14 @@ addLayer("b", {
             title: "Token Doubler",
             cost(x) {
                 if (x.lt(2)) return new Decimal(2).mul(new Decimal(3).pow(x))
-                else return new Decimal(6).mul(new Decimal(5).pow(x.sub(1)))
+                else if (x.lt(300)) return new Decimal(6).mul(new Decimal(5).pow(x.sub(1)))
+                else if (x.lt(500)) {
+                    let basePrice = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298)))
+                    return basePrice.mul(new Decimal(10).pow(x.sub(300)))
+                } else {
+                    let basePrice = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298))).mul(new Decimal(10).pow(new Decimal(200)))
+                    return basePrice.mul(new Decimal(1000).pow(x.sub(500)))
+                }
             },
             effect(x) {
                 return new Decimal(2).pow(x)
@@ -178,11 +208,88 @@ addLayer("b", {
                 return format(this.effect()) + " tokens/sec"
             },
         },
+        12: {
+            title: "Ode to automation",
+            description: "Keep rebirth upgrades on reboot.",
+            cost: new Decimal("1e50"),
+        },
+        13: {
+            title: "That other upgrade is better now",
+            description: "Automatically buy the Tripler in the rebirth layer.",
+            cost: new Decimal("1e100"),
+        },
+        14: {
+            title: "Getting real close to infinity...",
+            description: "Generate 1% of points you would get on reboot reset.",
+            cost: new Decimal("1e200"),
+        },
+        15: {
+            title: "No reset???",
+            description: "Automatically max out the Token Doubler.",
+            cost: new Decimal("1e400"),
+        },
+        16: {
+            title: "Ooh a new feature!",
+            description: "Unlock Dark Dimensions, which boosts Token Doubler.",
+            cost: new Decimal("1e730"),
+        },
     },
     update() {
+    if (hasUpgrade('b', 16)) {
+            let gain = new Decimal(0)
+            if (player.points.gte(1e730)) {
+                gain = player.points.log10().sub(729).div(100)
+            }
+            player['b'].darkDimensions = gain
+        }
         if (hasUpgrade('b', 11)) {
             let tokenGain = getResetGain('r').div(1000)
             player['r'].points = player['r'].points.add(tokenGain)
+        }
+        if (hasUpgrade('b', 13)) {
+            let owned = getBuyableAmount('r', 11)
+            let cost = new Decimal(4).pow(owned)
+            while (player['r'].points.gte(cost)) {
+                player['r'].points = player['r'].points.sub(cost)
+                owned = owned.add(1)
+                setBuyableAmount('r', 11, owned)
+                cost = new Decimal(4).pow(owned)
+            }
+        }
+        if (hasUpgrade('b', 14)) {
+            let pointGain = getResetGain('b').div(100)
+            player['b'].points = player['b'].points.add(pointGain)
+        }
+        if (hasUpgrade('b', 15)) {
+            let owned = getBuyableAmount('b', 11)
+            let cost
+            if (owned.lt(2)) cost = new Decimal(2).mul(new Decimal(3).pow(owned))
+            else if (owned.lt(300)) cost = new Decimal(6).mul(new Decimal(5).pow(owned.sub(1)))
+            else if (owned.lt(500)) cost = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298))).mul(new Decimal(10).pow(owned.sub(300)))
+            else cost = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298))).mul(new Decimal(10).pow(new Decimal(200))).mul(new Decimal(1000).pow(owned.sub(500)))
+            
+            while (player['b'].points.gte(cost)) {
+                player['b'].points = player['b'].points.sub(cost)
+                owned = owned.add(1)
+                setBuyableAmount('b', 11, owned)
+                
+                if (owned.lt(2)) cost = new Decimal(2).mul(new Decimal(3).pow(owned))
+                else if (owned.lt(300)) cost = new Decimal(6).mul(new Decimal(5).pow(owned.sub(1)))
+                else if (owned.lt(500)) cost = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298))).mul(new Decimal(10).pow(owned.sub(300)))
+                else cost = new Decimal(6).mul(new Decimal(5).pow(new Decimal(298))).mul(new Decimal(10).pow(new Decimal(200))).mul(new Decimal(1000).pow(owned.sub(500)))
+            }
+        }
+        if (hasUpgrade('b', 12)) {
+            let rebirthUpgrades = [11, 12, 13, 14, 15]
+            for (let upgrade of rebirthUpgrades) {
+                if (!hasUpgrade('r', upgrade)) {
+                    let cost = layers['r'].upgrades[upgrade].cost
+                    if (player['r'].points.gte(cost)) {
+                        player['r'].points = player['r'].points.sub(cost)
+                        addUpgrade('r', upgrade)
+                    }
+                }
+            }
         }
     },
 })
